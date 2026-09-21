@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${pageTitle} ?: 'Scan ID'">Scan ID</title>
+    <style>
+        :root {
+            --primary-1: #075e54;
+            --primary-2: #128c7e;
+            --accent: #25d366;
+            --soft: #dcf8c6;
+            --bg: #ece5dd;
+            --text: #16332f;
+            --white: #ffffff;
+            --danger: #c0392b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg), var(--soft));
+            color: var(--text);
+        }
+
+        .topbar {
+            background: var(--primary-1);
+            color: var(--white);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(7, 94, 84, 0.18);
+        }
+
+        .brand {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 32px auto;
+            padding: 18px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.75);
+            border-radius: 22px;
+            box-shadow: 0 12px 28px rgba(18, 140, 126, 0.12);
+            padding: 28px;
+            border: 1px solid rgba(18,140,126,0.1);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .scan-box {
+            background: linear-gradient(135deg, var(--primary-2), var(--primary-1));
+            color: var(--white);
+            border-radius: 22px;
+            padding: 28px;
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+        }
+
+        .scan-box h2 {
+            margin: 0 0 12px;
+            font-size: 2rem;
+        }
+
+        .scan-box p {
+            margin: 0 0 14px;
+            font-size: 1.05rem;
+            opacity: 0.95;
+        }
+
+        .upload-form {
+            margin-top: 18px;
+        }
+
+        .file-input {
+            display: block;
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.35);
+            background: rgba(255,255,255,0.12);
+            color: var(--white);
+        }
+
+        .file-input::file-selector-button {
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            color: #0b3b35;
+            font-weight: 700;
+            cursor: pointer;
+            margin-right: 14px;
+        }
+
+        .btn {
+            margin-top: 16px;
+            background: var(--accent);
+            color: #093d37;
+            border: none;
+            border-radius: 10px;
+            font-weight: 800;
+            padding: 12px 22px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.18s ease;
+        }
+
+        .btn:hover { transform: translateY(-1px); }
+
+        .info-box {
+            background: rgba(255,255,255,0.8);
+            border-radius: 18px;
+            padding: 22px;
+            border: 1px solid rgba(7,94,84,0.12);
+        }
+
+        .info-box h3 {
+            margin-top: 0;
+            font-size: 1.3rem;
+            color: var(--primary-1);
+        }
+
+        .status {
+            margin-top: 18px;
+            background: rgba(37, 211, 102, 0.15);
+            border: 1px solid rgba(37, 211, 102, 0.45);
+            color: #114d44;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .error {
+            margin-top: 18px;
+            background: rgba(192, 57, 43, 0.1);
+            border: 1px solid rgba(192, 57, 43, 0.35);
+            color: var(--danger);
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .result {
+            margin-top: 28px;
+            background: var(--white);
+            border-radius: 18px;
+            padding: 24px;
+            border: 1px solid rgba(7,94,84,0.12);
+        }
+
+        .result h3 {
+            margin-top: 0;
+            color: var(--primary-1);
+            font-size: 1.6rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+
+        .tile {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid rgba(7,94,84,0.08);
+        }
+
+        .tile .label {
+            display: block;
+            font-size: 0.78rem;
+            letter-spacing: 0.04em;
+            color: var(--primary-2);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .tile .value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+            word-break: break-word;
+        }
+
+        .modules {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .chip {
+            background: var(--soft);
+            border: 1px solid rgba(18,140,126,0.25);
+            color: var(--primary-1);
+            border-radius: 999px;
+            padding: 8px 12px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 760px) {
+            .hero { grid-template-columns: 1fr; }
+            .brand { font-size: 1.5rem; }
+            .topbar { padding: 12px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand">Scan ID</div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="hero">
+                <div class="scan-box">
+                    <h2>Scan the college ID card</h2>
+                    <p>Upload an image or use your camera to scan the barcode and extract the roll number automatically.</p>
+
+                    <div id="cameraSection" style="display:none; margin-top: 14px; margin-bottom: 10px;">
+                        <video id="cameraVideo" autoplay playsinline muted style="width:100%; max-width: 340px; border-radius: 12px; background: #000; display:block; margin: 0 auto 12px;"></video>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button type="button" id="captureCameraBtn" class="btn" style="margin-top:0;">Capture from Camera</button>
+                            <button type="button" id="stopCameraBtn" class="btn" style="margin-top:0; background:#ece5dd; color:#0b3b35;">Stop Camera</button>
+                        </div>
+                    </div>
+
+                    <form th:action="@{/scan}" method="post" enctype="multipart/form-data" class="upload-form" id="scanForm">
+                        <input id="barcodeFile" type="file" name="barcodeFile" accept="image/*" class="file-input" />
+                        <input id="manualRoll" type="text" name="manualRoll" placeholder="Or type roll number manually" style="width:100%; margin-top:12px; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color:#fff;" />
+                        <button type="submit" class="btn">Scan Barcode</button>
+                    </form>
+
+                    <button type="button" id="openCameraBtn" class="btn" style="margin-top: 12px;">Use Camera</button>
+                </div>
+
+                <div class="info-box">
+                    <h3>Login pattern used</h3>
+                    <p>Student portal uses the roll number as both username and password in uppercase.</p>
+                    <p><strong>Example:</strong> 25221A0568</p>
+                    <div class="status">No authentication is required in this demo project. It reads the barcode and shows the structured data.</div>
+                    <div th:if="${error}" class="error" th:text="${error}"></div>
+                </div>
+            </div>
+
+            <div th:if="${student != null}" class="result">
+                <h3>Student Details</h3>
+                <div class="grid">
+                    <div class="tile">
+                        <span class="label">Roll Number</span>
+                        <span class="value" th:text="${student.rollNumber}">-</span>
+                    </div>
+                    <div class="tile">
+                        <span class="label">Name</span>
+                        <span class="value" th:text="${student.name}">-</span>
+                    </div>
+                    <div class="tile">
+                        <span class="label">College</span>
+                        <span class="value" th:text="${student.collegeName}">-</span>
+                    </div>
+                    <div class="tile">
+                        <span class="label">Department</span>
+                        <span class="value" th:text="${student.department}">-</span>
+                    </div>
+                    <div class="tile">
+                        <span class="label">Class</span>
+                        <span class="value" th:text="${student.className}">-</span>
+                    </div>
+                    <div class="tile">
+                        <span class="label">Section</span>
+                        <span class="value" th:text="${student.section}">-</span>
+                    </div>
+                    <div class="tile">
+                        <span class="label">Year</span>
+                        <span class="value" th:text="${student.year}">-</span>
+                    </div>
+                    <div class="tile">
+                        <span class="label">Status</span>
+                        <span class="value" th:text="${student.status}">-</span>
+                    </div>
+                    <div class="tile">
+                        <span class="label">Last Login</span>
+                        <span class="value" th:text="${student.lastLogin}">-</span>
+                    </div>
+                </div>
+
+                <div th:if="${not #lists.isEmpty(student.modules)}" style="margin-top: 20px;">
+                    <h3>Available Modules</h3>
+                    <div class="modules">
+                        <span class="chip" th:each="module : ${student.modules}" th:text="${module}">Module</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('cameraVideo');
+        const cameraSection = document.getElementById('cameraSection');
+        const openCameraBtn = document.getElementById('openCameraBtn');
+        const captureCameraBtn = document.getElementById('captureCameraBtn');
+        const stopCameraBtn = document.getElementById('stopCameraBtn');
+        const fileInput = document.getElementById('barcodeFile');
+        const scanForm = document.getElementById('scanForm');
+        const manualRollInput = document.getElementById('manualRoll');
+
+        let stream = null;
+        let autoCaptureTimer = null;
+
+        async function startCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('This browser does not support camera access. Please use the file upload option or type the roll number manually.');
+                return;
+            }
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                    audio: false
+                });
+                video.srcObject = stream;
+                cameraSection.style.display = 'block';
+                openCameraBtn.textContent = 'Camera Ready';
+                startAutoCapture();
+            } catch (error) {
+                alert('Camera permission was denied. Please choose a file upload or enter the roll number manually.');
+            }
+        }
+
+        function startAutoCapture() {
+            if (autoCaptureTimer) {
+                clearInterval(autoCaptureTimer);
+            }
+            autoCaptureTimer = setInterval(() => {
+                if (video && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+                    captureFromCamera();
+                }
+            }, 3000);
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            if (video) {
+                video.srcObject = null;
+            }
+            cameraSection.style.display = 'none';
+            openCameraBtn.textContent = 'Use Camera';
+            if (autoCaptureTimer) {
+                clearInterval(autoCaptureTimer);
+                autoCaptureTimer = null;
+            }
+        }
+
+        function captureFromCamera() {
+            if (!video || !video.videoWidth || !video.videoHeight) {
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(function (blob) {
+                if (!blob) {
+                    return;
+                }
+
+                const file = new File([blob], 'camera-capture.png', { type: 'image/png' });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+
+                if (!manualRollInput.value || manualRollInput.value.trim() === '') {
+                    scanForm.requestSubmit();
+                }
+            }, 'image/png');
+        }
+
+        openCameraBtn.addEventListener('click', startCamera);
+        stopCameraBtn.addEventListener('click', stopCamera);
+        captureCameraBtn.addEventListener('click', captureFromCamera);
+        fileInput.addEventListener('change', function () {
+            if (fileInput.files && fileInput.files.length > 0) {
+                scanForm.submit();
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            startCamera();
+        });
+    </script>
+</body>
+</html>

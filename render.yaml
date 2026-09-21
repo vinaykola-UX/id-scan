@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: scan-id
+    runtime: docker
+    plan: free
+    healthCheckPath: /
