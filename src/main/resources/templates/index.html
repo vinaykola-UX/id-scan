@@ -203,6 +203,18 @@
             word-break: break-word;
         }
 
+        .detail-section {
+            margin-top: 24px;
+        }
+
+        .detail-section h4 {
+            margin: 0 0 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--soft);
+            color: var(--primary-1);
+            font-size: 1.05rem;
+        }
+
         .modules {
             display: flex;
             flex-wrap: wrap;
@@ -267,7 +279,9 @@
                      th:src="${student.profileImageUrl}"
                      alt="Student profile"
                      style="display:block; width:120px; height:120px; object-fit:cover; border-radius:14px; margin-bottom:18px; border:3px solid #dcf8c6;" />
-                <div class="grid">
+                <div class="detail-section">
+                    <h4>Personal Information</h4>
+                    <div class="grid">
                     <div class="tile">
                         <span class="label">Roll Number</span>
                         <span class="value" th:text="${student.rollNumber}">-</span>
@@ -292,6 +306,12 @@
                         <span class="label">Religion</span>
                         <span class="value" th:text="${student.religion}">-</span>
                     </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h4>Contact Information</h4>
+                    <div class="grid">
                     <div class="tile">
                         <span class="label">Parent / Guardian</span>
                         <span class="value" th:text="${student.parentName}">-</span>
@@ -308,6 +328,12 @@
                         <span class="label">Address</span>
                         <span class="value" th:text="${student.address}">-</span>
                     </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h4>Academic Information</h4>
+                    <div class="grid">
                     <div class="tile">
                         <span class="label">College</span>
                         <span class="value" th:text="${student.collegeName}">-</span>
@@ -328,6 +354,12 @@
                         <span class="label">Year</span>
                         <span class="value" th:text="${student.year}">-</span>
                     </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h4>Scan Information</h4>
+                    <div class="grid">
                     <div class="tile">
                         <span class="label">Status</span>
                         <span class="value" th:text="${student.status}">-</span>
@@ -335,6 +367,7 @@
                     <div class="tile">
                         <span class="label">Last Login</span>
                         <span class="value" th:text="${student.lastLogin}">-</span>
+                    </div>
                     </div>
                 </div>
 

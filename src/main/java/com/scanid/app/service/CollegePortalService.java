@@ -199,40 +199,60 @@ public class CollegePortalService {
     }
 
     private String extractByPatterns(Document document, List<String> selectors, String labelPattern) {
+        if (document == null) {
+            return "N/A";
+        }
         for (String selector : selectors) {
-            String text = textOf(document, selector);
+            Element element = document.selectFirst(selector);
+            String text = valueOf(element);
             if (text != null && !text.isBlank()) {
                 return text;
             }
         }
         if (labelPattern != null) {
             Pattern labelRegex = Pattern.compile("(?i)" + labelPattern);
-            for (Element label : document.select("th, td, span, label, div")) {
+            for (Element label : document.select("th, td, span, label")) {
                 String labelText = label.text().trim();
-                if (!labelRegex.matcher(labelText).find()) {
+                if (!labelRegex.matcher(labelText).find() || labelContainsValue(labelText, labelRegex)) {
                     continue;
                 }
                 Element sibling = label.nextElementSibling();
-                if (sibling != null && !sibling.text().isBlank()) {
-                    return sibling.text().trim();
+                String siblingValue = valueOf(sibling);
+                if (siblingValue != null && !siblingValue.isBlank() && !labelRegex.matcher(siblingValue).find()) {
+                    return siblingValue;
                 }
                 Element parent = label.parent();
                 if (parent != null) {
-                    String parentText = parent.text().trim();
-                    if (!parentText.equalsIgnoreCase(labelText) && parentText.length() > labelText.length()) {
-                        return parentText.substring(labelText.length()).replaceFirst("^[:\\-\\s]+", "").trim();
+                    Elements siblings = parent.children();
+                    int labelIndex = siblings.indexOf(label);
+                    if (labelIndex >= 0 && labelIndex + 1 < siblings.size()) {
+                        String nextValue = valueOf(siblings.get(labelIndex + 1));
+                        if (nextValue != null && !nextValue.isBlank() && !labelRegex.matcher(nextValue).find()) {
+                            return nextValue;
+                        }
                     }
                 }
             }
         }
-        Elements labels = document.select("span, td, div, label");
-        for (Element label : labels) {
-            String text = label.text();
-            if (text != null && text.length() > 2 && text.matches("(?i).*(name|department|year|section|class|course).*")) {
-                return text;
-            }
-        }
         return "N/A";
+    }
+
+    private String valueOf(Element element) {
+        if (element == null) {
+            return null;
+        }
+        String value = element.hasAttr("value") ? element.attr("value") : element.text();
+        return value == null ? null : value.trim();
+    }
+
+    private boolean labelContainsValue(String text, Pattern labelRegex) {
+        String normalized = text.replaceAll("\\s+", " ").trim();
+        Matcher matcher = labelRegex.matcher(normalized);
+        if (!matcher.find()) {
+            return false;
+        }
+        String remainder = normalized.substring(matcher.end()).replaceFirst("^[:\\-\\s]+", "").trim();
+        return !remainder.isBlank();
     }
 
     private String defaultValue(String value) {
