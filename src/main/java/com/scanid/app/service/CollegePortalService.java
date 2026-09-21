@@ -75,6 +75,14 @@ public class CollegePortalService {
             }
 
             profile.setName(extractByPatterns(postLoginDoc, List.of("#lblStudentName", "#Stud_lblName", "#ctl00_Stud_lblName", "#lblName")));
+            profile.setGender(extractByPatterns(postLoginDoc, List.of("#lblGender", "#Stud_lblGender", "#ctl00_Stud_lblGender", "#lblSex"), "gender|sex"));
+            profile.setDateOfBirth(extractByPatterns(postLoginDoc, List.of("#lblDOB", "#Stud_lblDOB", "#ctl00_Stud_lblDOB", "#lblDateOfBirth"), "date.?of.?birth|dob"));
+            profile.setCaste(extractByPatterns(postLoginDoc, List.of("#lblCaste", "#Stud_lblCaste", "#ctl00_Stud_lblCaste"), "caste|community"));
+            profile.setReligion(extractByPatterns(postLoginDoc, List.of("#lblReligion", "#Stud_lblReligion", "#ctl00_Stud_lblReligion"), "religion"));
+            profile.setParentName(extractByPatterns(postLoginDoc, List.of("#lblParentName", "#Stud_lblParentName", "#ctl00_Stud_lblParentName", "#lblFatherName"), "father.?name|parent.?name|guardian.?name"));
+            profile.setPhoneNumber(extractByPatterns(postLoginDoc, List.of("#lblMobile", "#Stud_lblMobile", "#ctl00_Stud_lblMobile", "#lblPhone"), "mobile|phone|contact"));
+            profile.setEmail(extractByPatterns(postLoginDoc, List.of("#lblEmail", "#Stud_lblEmail", "#ctl00_Stud_lblEmail"), "email|e.?mail"));
+            profile.setAddress(extractByPatterns(postLoginDoc, List.of("#lblAddress", "#Stud_lblAddress", "#ctl00_Stud_lblAddress"), "address"));
             profile.setDepartment(extractByPatterns(postLoginDoc, List.of("#lblDepartment", "#Stud_lblDepartment", "#ctl00_Stud_lblDepartment", "#lblDept")));
             profile.setClassName(extractByPatterns(postLoginDoc, List.of("#lblClass", "#Stud_lblClass", "#ctl00_Stud_lblClass", "#lblCourse")));
             profile.setSection(extractByPatterns(postLoginDoc, List.of("#lblSection", "#Stud_lblSection", "#ctl00_Stud_lblSection")));
@@ -86,6 +94,14 @@ public class CollegePortalService {
             if (profile.getName() == null || profile.getName().isBlank()) {
                 profile.setName("Student");
             }
+            profile.setGender(defaultValue(profile.getGender()));
+            profile.setDateOfBirth(defaultValue(profile.getDateOfBirth()));
+            profile.setCaste(defaultValue(profile.getCaste()));
+            profile.setReligion(defaultValue(profile.getReligion()));
+            profile.setParentName(defaultValue(profile.getParentName()));
+            profile.setPhoneNumber(defaultValue(profile.getPhoneNumber()));
+            profile.setEmail(defaultValue(profile.getEmail()));
+            profile.setAddress(defaultValue(profile.getAddress()));
             if (profile.getClassName() == null || profile.getClassName().isBlank()) {
                 profile.setClassName("N/A");
             }
@@ -131,10 +147,34 @@ public class CollegePortalService {
     }
 
     private String extractByPatterns(Document document, List<String> selectors) {
+        return extractByPatterns(document, selectors, null);
+    }
+
+    private String extractByPatterns(Document document, List<String> selectors, String labelPattern) {
         for (String selector : selectors) {
             String text = textOf(document, selector);
             if (text != null && !text.isBlank()) {
                 return text;
+            }
+        }
+        if (labelPattern != null) {
+            Pattern labelRegex = Pattern.compile("(?i)" + labelPattern);
+            for (Element label : document.select("th, td, span, label, div")) {
+                String labelText = label.text().trim();
+                if (!labelRegex.matcher(labelText).find()) {
+                    continue;
+                }
+                Element sibling = label.nextElementSibling();
+                if (sibling != null && !sibling.text().isBlank()) {
+                    return sibling.text().trim();
+                }
+                Element parent = label.parent();
+                if (parent != null) {
+                    String parentText = parent.text().trim();
+                    if (!parentText.equalsIgnoreCase(labelText) && parentText.length() > labelText.length()) {
+                        return parentText.substring(labelText.length()).replaceFirst("^[:\\-\\s]+", "").trim();
+                    }
+                }
             }
         }
         Elements labels = document.select("span, td, div, label");
@@ -145,6 +185,10 @@ public class CollegePortalService {
             }
         }
         return "N/A";
+    }
+
+    private String defaultValue(String value) {
+        return value == null || value.isBlank() ? "N/A" : value;
     }
 
     private String textOf(Document document, String selector) {
