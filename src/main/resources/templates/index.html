@@ -241,7 +241,6 @@
                     <div id="cameraSection" style="display:none; margin-top: 14px; margin-bottom: 10px;">
                         <video id="cameraVideo" autoplay playsinline muted style="width:100%; max-width: 340px; border-radius: 12px; background: #000; display:block; margin: 0 auto 12px;"></video>
                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                            <button type="button" id="captureCameraBtn" class="btn" style="margin-top:0;">Capture from Camera</button>
                             <button type="button" id="stopCameraBtn" class="btn" style="margin-top:0; background:#ece5dd; color:#0b3b35;">Stop Camera</button>
                         </div>
                     </div>
@@ -319,7 +318,6 @@
         const video = document.getElementById('cameraVideo');
         const cameraSection = document.getElementById('cameraSection');
         const openCameraBtn = document.getElementById('openCameraBtn');
-        const captureCameraBtn = document.getElementById('captureCameraBtn');
         const stopCameraBtn = document.getElementById('stopCameraBtn');
         const fileInput = document.getElementById('barcodeFile');
         const scanForm = document.getElementById('scanForm');
@@ -327,6 +325,10 @@
 
         let stream = null;
         let autoCaptureTimer = null;
+        let nativeDetector = null;
+        let detectionFrame = null;
+        let detectionInProgress = false;
+        let scanSubmitted = false;
 
         async function startCamera() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -342,19 +344,61 @@
                 video.srcObject = stream;
                 cameraSection.style.display = 'block';
                 openCameraBtn.textContent = 'Camera Ready';
-                startAutoCapture();
+                scanSubmitted = false;
+                await startNativeDetection();
             } catch (error) {
                 alert('Camera permission was denied. Please choose a file upload or enter the roll number manually.');
             }
         }
 
-        function startAutoCapture() {
+        async function startNativeDetection() {
+            if ('BarcodeDetector' in window) {
+                try {
+                    const supportedFormats = await BarcodeDetector.getSupportedFormats();
+                    const formats = ['code_128', 'code_39', 'codabar', 'ean_13', 'ean_8', 'itf', 'qr_code']
+                        .filter(format => supportedFormats.includes(format));
+                    nativeDetector = new BarcodeDetector({ formats });
+                    detectBarcodeFrame();
+                    return;
+                } catch (error) {
+                    nativeDetector = null;
+                }
+            }
+
+            startImageFallback();
+        }
+
+        async function detectBarcodeFrame() {
+            if (!nativeDetector || scanSubmitted || !stream) {
+                return;
+            }
+
+            if (!detectionInProgress && video.readyState >= 2) {
+                detectionInProgress = true;
+                try {
+                    const detectedCodes = await nativeDetector.detect(video);
+                    const detectedCode = detectedCodes.find(code => code.rawValue && code.rawValue.trim());
+                    if (detectedCode) {
+                        submitDetectedRoll(detectedCode.rawValue);
+                        return;
+                    }
+                } catch (error) {
+                    // Continue scanning while the camera is moving or the frame is unreadable.
+                } finally {
+                    detectionInProgress = false;
+                }
+            }
+
+            detectionFrame = requestAnimationFrame(detectBarcodeFrame);
+        }
+
+        function startImageFallback() {
             if (autoCaptureTimer) {
                 clearInterval(autoCaptureTimer);
             }
             autoCaptureTimer = setInterval(() => {
-                if (video && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
-                    captureFromCamera();
+                if (!scanSubmitted && video && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+                    submitCameraImage();
                 }
             }, 3000);
         }
@@ -367,15 +411,32 @@
             if (video) {
                 video.srcObject = null;
             }
+            if (detectionFrame) {
+                cancelAnimationFrame(detectionFrame);
+                detectionFrame = null;
+            }
             cameraSection.style.display = 'none';
             openCameraBtn.textContent = 'Use Camera';
+            nativeDetector = null;
             if (autoCaptureTimer) {
                 clearInterval(autoCaptureTimer);
                 autoCaptureTimer = null;
             }
         }
 
-        function captureFromCamera() {
+        function submitDetectedRoll(rawValue) {
+            const rollNumber = rawValue.trim();
+            if (!rollNumber || scanSubmitted) {
+                return;
+            }
+
+            scanSubmitted = true;
+            manualRollInput.value = rollNumber.toUpperCase();
+            stopCamera();
+            scanForm.requestSubmit();
+        }
+
+        function submitCameraImage() {
             if (!video || !video.videoWidth || !video.videoHeight) {
                 return;
             }
@@ -396,7 +457,9 @@
                 dataTransfer.items.add(file);
                 fileInput.files = dataTransfer.files;
 
-                if (!manualRollInput.value || manualRollInput.value.trim() === '') {
+                if (!scanSubmitted) {
+                    scanSubmitted = true;
+                    stopCamera();
                     scanForm.requestSubmit();
                 }
             }, 'image/png');
@@ -404,7 +467,6 @@
 
         openCameraBtn.addEventListener('click', startCamera);
         stopCameraBtn.addEventListener('click', stopCamera);
-        captureCameraBtn.addEventListener('click', captureFromCamera);
         fileInput.addEventListener('change', function () {
             if (fileInput.files && fileInput.files.length > 0) {
                 scanForm.submit();
