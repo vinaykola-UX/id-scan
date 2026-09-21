@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 public class CollegePortalService {
 
     private static final String LOGIN_URL = "https://www.bvcecautonomous.com/SBLogin.aspx";
+    private static final String PROFILE_URL = "https://www.bvcecautonomous.com/STUDENTLOGIN/Frm_StudentProfile.aspx";
 
     public StudentProfile fetchStudentByRollNumber(String rollNumber) {
         String normalizedRoll = normalizeRoll(rollNumber);
@@ -63,31 +64,34 @@ public class CollegePortalService {
                 throw new IllegalArgumentException("The provided roll number could not be detected.");
             }
 
+            Document profileDoc = fetchProfilePage(loggedInResponse);
+            Document detailsDoc = profileDoc != null ? profileDoc : postLoginDoc;
+
             StudentProfile profile = new StudentProfile();
             profile.setRollNumber(normalizedRoll);
             profile.setCollegeName("BVC Group of Institutions (Autonomous)");
             profile.setStatus("Logged in successfully via portal credentials");
             profile.setLastLogin("Auto captured from portal");
 
-            String rollLabel = textOf(postLoginDoc, "#lblHTNo");
+            String rollLabel = firstValue(profileDoc, postLoginDoc, "#lblHTNo", "#Stud_lblHTNo", "#ctl00_Stud_lblHTNo");
             if (rollLabel != null && !rollLabel.isBlank()) {
                 profile.setRollNumber(rollLabel.trim());
             }
 
-            profile.setName(extractByPatterns(postLoginDoc, List.of("#lblStudentName", "#Stud_lblName", "#ctl00_Stud_lblName", "#lblName")));
-            profile.setGender(extractByPatterns(postLoginDoc, List.of("#lblGender", "#Stud_lblGender", "#ctl00_Stud_lblGender", "#lblSex"), "gender|sex"));
-            profile.setDateOfBirth(extractByPatterns(postLoginDoc, List.of("#lblDOB", "#Stud_lblDOB", "#ctl00_Stud_lblDOB", "#lblDateOfBirth"), "date.?of.?birth|dob"));
-            profile.setCaste(extractByPatterns(postLoginDoc, List.of("#lblCaste", "#Stud_lblCaste", "#ctl00_Stud_lblCaste"), "caste|community"));
-            profile.setReligion(extractByPatterns(postLoginDoc, List.of("#lblReligion", "#Stud_lblReligion", "#ctl00_Stud_lblReligion"), "religion"));
-            profile.setParentName(extractByPatterns(postLoginDoc, List.of("#lblParentName", "#Stud_lblParentName", "#ctl00_Stud_lblParentName", "#lblFatherName"), "father.?name|parent.?name|guardian.?name"));
-            profile.setPhoneNumber(extractByPatterns(postLoginDoc, List.of("#lblMobile", "#Stud_lblMobile", "#ctl00_Stud_lblMobile", "#lblPhone"), "mobile|phone|contact"));
-            profile.setEmail(extractByPatterns(postLoginDoc, List.of("#lblEmail", "#Stud_lblEmail", "#ctl00_Stud_lblEmail"), "email|e.?mail"));
-            profile.setAddress(extractByPatterns(postLoginDoc, List.of("#lblAddress", "#Stud_lblAddress", "#ctl00_Stud_lblAddress"), "address"));
-            profile.setDepartment(extractByPatterns(postLoginDoc, List.of("#lblDepartment", "#Stud_lblDepartment", "#ctl00_Stud_lblDepartment", "#lblDept")));
-            profile.setClassName(extractByPatterns(postLoginDoc, List.of("#lblClass", "#Stud_lblClass", "#ctl00_Stud_lblClass", "#lblCourse")));
-            profile.setSection(extractByPatterns(postLoginDoc, List.of("#lblSection", "#Stud_lblSection", "#ctl00_Stud_lblSection")));
-            profile.setYear(extractByPatterns(postLoginDoc, List.of("#lblYear", "#Stud_lblYear", "#ctl00_Stud_lblYear")));
-            profile.setProfileImageUrl(extractImage(postLoginDoc, "#imgStudUser"));
+            profile.setName(extractByPatterns(detailsDoc, List.of("#lblStudentName", "#Stud_lblName", "#ctl00_Stud_lblName", "#lblName")));
+            profile.setGender(extractProfileValue(profileDoc, postLoginDoc, List.of("#lblGender", "#Stud_lblGender", "#ctl00_Stud_lblGender", "#lblSex"), "gender|sex"));
+            profile.setDateOfBirth(extractProfileValue(profileDoc, postLoginDoc, List.of("#lblDOB", "#Stud_lblDOB", "#ctl00_Stud_lblDOB", "#lblDateOfBirth"), "date.?of.?birth|dob"));
+            profile.setCaste(extractProfileValue(profileDoc, postLoginDoc, List.of("#lblCaste", "#Stud_lblCaste", "#ctl00_Stud_lblCaste"), "caste|community"));
+            profile.setReligion(extractProfileValue(profileDoc, postLoginDoc, List.of("#lblReligion", "#Stud_lblReligion", "#ctl00_Stud_lblReligion"), "religion"));
+            profile.setParentName(extractProfileValue(profileDoc, postLoginDoc, List.of("#lblParentName", "#Stud_lblParentName", "#ctl00_Stud_lblParentName", "#lblFatherName"), "father.?name|parent.?name|guardian.?name"));
+            profile.setPhoneNumber(extractProfileValue(profileDoc, postLoginDoc, List.of("#lblMobile", "#Stud_lblMobile", "#ctl00_Stud_lblMobile", "#lblPhone"), "mobile|phone|contact"));
+            profile.setEmail(extractProfileValue(profileDoc, postLoginDoc, List.of("#lblEmail", "#Stud_lblEmail", "#ctl00_Stud_lblEmail"), "email|e.?mail"));
+            profile.setAddress(extractProfileValue(profileDoc, postLoginDoc, List.of("#lblAddress", "#Stud_lblAddress", "#ctl00_Stud_lblAddress"), "address"));
+            profile.setDepartment(extractByPatterns(detailsDoc, List.of("#lblDepartment", "#Stud_lblDepartment", "#ctl00_Stud_lblDepartment", "#lblDept")));
+            profile.setClassName(extractByPatterns(detailsDoc, List.of("#lblClass", "#Stud_lblClass", "#ctl00_Stud_lblClass", "#lblCourse")));
+            profile.setSection(extractByPatterns(detailsDoc, List.of("#lblSection", "#Stud_lblSection", "#ctl00_Stud_lblSection")));
+            profile.setYear(extractByPatterns(detailsDoc, List.of("#lblYear", "#Stud_lblYear", "#ctl00_Stud_lblYear")));
+            profile.setProfileImageUrl(extractImage(detailsDoc, "#imgStudUser"));
 
             profile.setModules(findModules(postLoginDoc));
 
@@ -119,6 +123,50 @@ public class CollegePortalService {
         } catch (IOException e) {
             throw new IllegalStateException("Unable to reach the college portal right now. Please try again in a moment.", e);
         }
+    }
+
+    private Document fetchProfilePage(Connection.Response loggedInResponse) throws IOException {
+        return Jsoup.connect(PROFILE_URL)
+                .userAgent("Mozilla/5.0")
+                .cookies(loggedInResponse.cookies())
+                .referrer(LOGIN_URL)
+                .method(Connection.Method.GET)
+                .timeout(30000)
+                .execute()
+                .parse();
+    }
+
+    private String firstValue(Document primary, Document fallback, String... selectors) {
+        if (primary != null) {
+            String value = textOfAny(primary, selectors);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return textOfAny(fallback, selectors);
+    }
+
+    private String textOfAny(Document document, String... selectors) {
+        if (document == null) {
+            return null;
+        }
+        for (String selector : selectors) {
+            String value = textOf(document, selector);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private String extractProfileValue(Document profileDoc, Document fallbackDoc, List<String> selectors, String labelPattern) {
+        if (profileDoc != null) {
+            String value = extractByPatterns(profileDoc, selectors, labelPattern);
+            if (!"N/A".equals(value)) {
+                return value;
+            }
+        }
+        return extractByPatterns(fallbackDoc, selectors, labelPattern);
     }
 
     private String normalizeRoll(String raw) {
@@ -207,7 +255,8 @@ public class CollegePortalService {
         if (image == null) {
             return "";
         }
-        return image.attr("src");
+        String absoluteUrl = image.absUrl("src");
+        return absoluteUrl.isBlank() ? image.attr("src") : absoluteUrl;
     }
 
     private List<String> findModules(Document document) {

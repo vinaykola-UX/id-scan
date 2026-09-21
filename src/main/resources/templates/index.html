@@ -263,6 +263,10 @@
 
             <div th:if="${student != null}" class="result">
                 <h3>Student Details</h3>
+                <img th:if="${student.profileImageUrl != null and !student.profileImageUrl.isBlank()}"
+                     th:src="${student.profileImageUrl}"
+                     alt="Student profile"
+                     style="display:block; width:120px; height:120px; object-fit:cover; border-radius:14px; margin-bottom:18px; border:3px solid #dcf8c6;" />
                 <div class="grid">
                     <div class="tile">
                         <span class="label">Roll Number</span>
