@@ -255,10 +255,8 @@
                 </div>
 
                 <div class="info-box">
-                    <h3>Login pattern used</h3>
-                    <p>Student portal uses the roll number as both username and password in uppercase.</p>
-                    <p><strong>Example:</strong> 25221A0568</p>
-                    <div class="status">No authentication is required in this demo project. It reads the barcode and shows the structured data.</div>
+                    <h3>Scan Status</h3>
+                    <div class="status">Point the camera at the barcode. It will be detected automatically and the student details will appear here.</div>
                     <div th:if="${error}" class="error" th:text="${error}"></div>
                 </div>
             </div>
